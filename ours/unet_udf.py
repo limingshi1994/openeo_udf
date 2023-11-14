@@ -83,12 +83,14 @@ def apply_datacube(cube: XarrayDataCube, context: dict) -> XarrayDataCube:
     # Extract data array from the cube
     cubearray: xarray.DataArray = cube.get_array()
     # Discard cloud for now 
-    cubearray.drop_sel(bands='SCL')
-    inspect(message="cubearray", data=cubearray) # bands, y, x
+    cubearray_wo_SCL = cubearray.drop_sel({"bands":"SCL"})
+    cubearray_final = cubearray_wo_SCL.drop_vars("t")
+    print("test")
+    print(cubearray_final.dims) # bands, y, x
 
-    inputarray = cubearray.transpose("bands", "y", "x")
+    inputarray = cubearray_final.transpose("bands", "y", "x")
     bands = inputarray.bands.values
-    print(bands)
+    inspect(message="bands", data=bands)
 
     # normalization of sat images (without cloud channel)
     norm_lo = np.percentile(inputarray, 1, axis=[1, 2])
@@ -105,7 +107,7 @@ def apply_datacube(cube: XarrayDataCube, context: dict) -> XarrayDataCube:
 
     ## transform your numpy array predictions into an xarray
     result = result.astype(np.float64)
-    result_xarray = xarray.DataArray(result, dims=["y", "x"], coords=dict(x=cubearray.coords["x"], y=cubearray.coords["y"]))
+    result_xarray = xarray.DataArray(result, dims=["y", "x"], coords=dict(x=cubearray_final.coords["x"], y=cubearray_final.coords["y"]))
     result_xarray = result_xarray \
         .expand_dims("bands",0).assign_coords(bands=["prediction"])
     inspect(message="result_xarray", data=result_xarray)
